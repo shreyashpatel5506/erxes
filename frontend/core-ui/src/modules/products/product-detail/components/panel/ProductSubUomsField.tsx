@@ -6,7 +6,8 @@ import { PANEL_TEXT_FIELD_CLASS_NAME } from 'ui-modules';
 import { SubUomItem } from '@/products/product-detail/types/detailTypes';
 import { ProductUomField } from './ProductUomField';
 
-type TSubUomRow = { key: string; uom: string; ratio: number };
+// `key` is the row's React key; `_id` is the saved sub unit's, if it has one.
+type TSubUomRow = { key: string; _id?: string; uom: string; ratio: number };
 
 const toRatio = (ratio: SubUomItem['ratio']) => {
   const value = Number(ratio);
@@ -16,6 +17,7 @@ const toRatio = (ratio: SubUomItem['ratio']) => {
 const toRows = (subUoms: SubUomItem[] = []): TSubUomRow[] =>
   subUoms.map((subUom, index) => ({
     key: subUom._id || `${subUom.uom}-${index}`,
+    _id: subUom._id,
     uom: subUom.uom || '',
     ratio: toRatio(subUom.ratio),
   }));
@@ -50,7 +52,12 @@ export const ProductSubUomsField = ({
   const commit = (next: TSubUomRow[]) => {
     setRows(next);
     if (next.every(isComplete)) {
-      onChange(next.map(({ key, uom, ratio }) => ({ _id: key, uom, ratio })));
+      // A new row gets its id from the server.
+      onChange(
+        next.map(({ _id, uom, ratio }) =>
+          _id ? { _id, uom, ratio } : { uom, ratio },
+        ),
+      );
     }
   };
 

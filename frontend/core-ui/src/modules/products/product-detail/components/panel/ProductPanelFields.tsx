@@ -183,7 +183,7 @@ export const ProductPanelFields = ({
   const changeType = (type: string) => {
     // A draft is checked as a whole on Create.
     if (draft) {
-      save({ type });
+      void save({ type });
       return;
     }
     if (type === 'unique' && (!product.duration || !product.durationType)) {
@@ -191,18 +191,18 @@ export const ProductPanelFields = ({
       return;
     }
     setUniqueDraft(null);
-    if (type !== product.type) save({ type });
+    if (type !== product.type) void save({ type });
   };
 
   const changeDuration = (patch: TDurationPatch) => {
     if (draft || !uniqueDraft) {
-      save(patch);
+      void save(patch);
       return;
     }
     const next = { ...uniqueDraft, ...patch };
     setUniqueDraft(next);
     if (next.duration && next.durationType) {
-      save({ type: 'unique', ...next }).then(
+      void save({ type: 'unique', ...next }).then(
         (saved) => saved && setUniqueDraft(null),
       );
     }
@@ -228,7 +228,7 @@ export const ProductPanelFields = ({
             onValueChange={(value) => {
               const categoryId = toSingleId(value);
               if (categoryId && categoryId !== product.categoryId) {
-                save({ categoryId });
+                void save({ categoryId });
               }
             }}
           />

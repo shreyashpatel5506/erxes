@@ -58,10 +58,12 @@ const isEmpty = (value: unknown) =>
 // product's `propertiesData`.
 const applyPatch = (
   draft: TProductDraft,
-  { customFieldsData, ...rest }: TProductPatch,
+  { customFieldsData, durationType, ...rest }: TProductPatch,
 ): TProductDraft => {
-  const next: TProductDraft = Object.assign({}, draft, rest);
+  const next: TProductDraft = { ...draft, ...rest };
   if (customFieldsData !== undefined) next.propertiesData = customFieldsData;
+  // The form clears it with `null`; a product has none then.
+  if (durationType !== undefined) next.durationType = durationType ?? undefined;
   return next;
 };
 
@@ -138,11 +140,19 @@ export const ProductPanelNew = ({
   const [settling, setSettling] = useState(false);
   const latest = useRef(draft);
   latest.current = draft;
+  // Set at once, unlike `busy`, so a second click cannot create twice.
+  const creating = useRef(false);
 
   const save = useCallback((patch: TProductPatch) => {
     const next = applyPatch(latest.current, patch);
     latest.current = next;
     setDraft((current) => applyPatch(current, patch));
+    // A changed field's error is out of date until the next Create.
+    setErrors((current) => {
+      const remaining = { ...current };
+      for (const key of Object.keys(patch)) delete remaining[key];
+      return remaining;
+    });
     return Promise.resolve<ProductDetail | null>(next);
   }, []);
 
@@ -155,6 +165,16 @@ export const ProductPanelNew = ({
   const cancel = () => (canGoBack ? back() : close());
 
   const create = async () => {
+    if (creating.current) return;
+    creating.current = true;
+    try {
+      await submit();
+    } finally {
+      creating.current = false;
+    }
+  };
+
+  const submit = async () => {
     setSettling(true);
     await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
     setSettling(false);
@@ -265,7 +285,12 @@ export const ProductPanelNew = ({
         visibleCount={tabs.length}
       />
       <div className="flex shrink-0 justify-end gap-2 border-t bg-background px-3 py-2.5">
-        <Button type="button" variant="outline" onClick={cancel}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={cancel}
+        >
           {t('cancel')}
         </Button>
         <Button type="button" disabled={busy} onClick={create}>

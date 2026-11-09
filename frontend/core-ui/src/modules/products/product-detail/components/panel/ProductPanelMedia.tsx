@@ -27,7 +27,8 @@ const useSavingValue = <T,>(saved: T, save: (value: T) => Promise<unknown>) => {
 
   const change = (next: T) => {
     setValue(next);
-    save(next).then((result) => !result && setValue(saved));
+    const restore = () => setValue(saved);
+    save(next).then((result) => !result && restore(), restore);
   };
 
   return [value, change] as const;

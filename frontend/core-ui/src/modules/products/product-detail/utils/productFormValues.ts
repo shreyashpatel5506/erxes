@@ -7,6 +7,7 @@ type TAttachmentInput = {
   name?: string;
   type?: string;
   size?: number;
+  duration?: number;
 };
 
 const normalizeBarcodes = (barcodes: ProductDetail['barcodes']): string[] => {
@@ -90,14 +91,24 @@ export const getProductFormDefaultValues = (
 
 const toAttachmentInput = (obj: unknown): TAttachmentInput | undefined => {
   if (obj == null || typeof obj !== 'object') return undefined;
-  const { url, name, type, size } = obj as Record<string, unknown>;
+  const { url, name, type, size, duration } = obj as Record<string, unknown>;
   return {
     url: url as string | undefined,
     name: name as string | undefined,
     type: type as string | undefined,
     size: size as number | undefined,
+    // Only videos have one; `AttachmentInput` takes it.
+    ...(typeof duration === 'number' && { duration }),
   };
 };
+
+// Cached attachments carry `__typename`, which `AttachmentInput` rejects.
+const toAttachmentInputs = (value: unknown): TAttachmentInput[] | undefined =>
+  Array.isArray(value)
+    ? value
+        .map(toAttachmentInput)
+        .filter((x): x is TAttachmentInput => x != null)
+    : undefined;
 
 const normalizeSubUomRatio = (ratio: number | string | undefined): number => {
   if (typeof ratio === 'number' && Number.isFinite(ratio) && ratio > 0)
@@ -113,11 +124,8 @@ export const toProductEditVariables = (data: ProductFormValues) => {
     data.attachment != null && !Array.isArray(data.attachment)
       ? toAttachmentInput(data.attachment) ?? null
       : null;
-  const attachmentMore = Array.isArray(data.attachmentMore)
-    ? data.attachmentMore
-        .map(toAttachmentInput)
-        .filter((x): x is TAttachmentInput => x != null)
-    : undefined;
+  const attachmentMore = toAttachmentInputs(data.attachmentMore);
+  const videos = toAttachmentInputs(data.videos);
   const subUoms = Array.isArray(data.subUoms)
     ? data.subUoms.map((item) => ({
         ...item,
@@ -126,5 +134,5 @@ export const toProductEditVariables = (data: ProductFormValues) => {
       }))
     : data.subUoms;
 
-  return { ...data, attachment, attachmentMore, subUoms };
+  return { ...data, attachment, attachmentMore, videos, subUoms };
 };

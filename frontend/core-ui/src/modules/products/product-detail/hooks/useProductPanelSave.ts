@@ -92,7 +92,8 @@ export const useProductPanelSave = (productId: string) => {
   const save = useCallback(
     (patch: TProductPatch) => {
       const next = queue.current.then(() => saveNow(patch));
-      queue.current = next;
+      // A rejected save must not stop the ones queued after it.
+      queue.current = next.catch(() => null);
       return next;
     },
     [saveNow],

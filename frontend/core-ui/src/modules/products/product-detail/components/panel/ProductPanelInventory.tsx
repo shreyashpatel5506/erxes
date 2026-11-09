@@ -56,22 +56,25 @@ export const ProductPanelInventory = ({
 
   // A draft has nothing to save yet: it takes the barcodes as they change.
   useEffect(() => {
-    if (draft && keep.current) save(pickBarcodes(form.getValues()));
+    if (draft && keep.current) void save(pickBarcodes(form.getValues()));
   }, [draft, edited, form, save]);
 
   const handleSave = async () => {
     setSaving(true);
-    const savedProduct = await save(pickBarcodes(form.getValues()));
-    setSaving(false);
-    // As saved: the server tidies barcodes.
-    if (savedProduct) {
-      form.reset({
-        ...form.getValues(),
-        ...pickBarcodes(
-          getProductFormDefaultValues(savedProduct) ??
-            EMPTY_PRODUCT_FORM_VALUES,
-        ),
-      });
+    try {
+      const savedProduct = await save(pickBarcodes(form.getValues()));
+      // As saved: the server tidies barcodes.
+      if (savedProduct) {
+        form.reset({
+          ...form.getValues(),
+          ...pickBarcodes(
+            getProductFormDefaultValues(savedProduct) ??
+              EMPTY_PRODUCT_FORM_VALUES,
+          ),
+        });
+      }
+    } finally {
+      setSaving(false);
     }
   };
 

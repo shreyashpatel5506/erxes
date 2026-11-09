@@ -8,6 +8,7 @@ import { PRODUCT_DETAIL_QUERY } from '@/products/product-detail/graphql/queries/
 import { useProductPanelSave } from '@/products/product-detail/hooks/useProductPanelSave';
 
 const mockToast = jest.fn();
+const mockLinkFiles = jest.fn(async (items: unknown[] = []) => items);
 
 // The product queries are built from the cursor fragments.
 jest.mock('erxes-ui', () => ({
@@ -18,9 +19,7 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 jest.mock('ui-modules/modules/products/hooks/useProductFiles', () => ({
-  useProductFileLinks: () => ({
-    linkFiles: async (items: unknown[] = []) => items,
-  }),
+  useProductFileLinks: () => ({ linkFiles: mockLinkFiles }),
 }));
 jest.mock('ui-modules/modules/products/components/ProductImageUploads', () => ({
   toProductAttachmentList: (value: unknown) =>
@@ -126,6 +125,64 @@ describe('useProductPanelSave', () => {
     });
     expect(saved).toMatchObject({ _id: 'p1', name: 'Latte' });
     expect(mockToast).not.toHaveBeenCalled();
+  });
+
+  it('sends cached videos without Apollo metadata', async () => {
+    const sent: Record<string, unknown>[] = [];
+    const video = {
+      __typename: 'Attachment',
+      url: 'https://cdn/clip.mp4',
+      name: 'clip.mp4',
+      size: 2048,
+      type: 'video/mp4',
+      duration: 12,
+    };
+    const withVideo = { ...PRODUCT, videos: [video] };
+    const cache = new InMemoryCache();
+    cache.writeQuery({
+      query: PRODUCT_DETAIL_QUERY,
+      variables: { _id: 'p1' },
+      data: { productDetail: withVideo },
+    });
+    const { result } = renderSave(cache, [editMock(sent, withVideo)]);
+
+    await act(async () => {
+      await result.current.save({ name: 'Latte' });
+    });
+
+    expect(sent[0].videos).toEqual([
+      {
+        url: 'https://cdn/clip.mp4',
+        name: 'clip.mp4',
+        size: 2048,
+        type: 'video/mp4',
+        duration: 12,
+      },
+    ]);
+  });
+
+  it('keeps saving after a save throws', async () => {
+    const sent: Record<string, unknown>[] = [];
+    const renamed = { ...PRODUCT, name: 'Latte' };
+    const { result } = renderSave(cacheWithProduct(), [
+      editMock(sent, renamed),
+    ]);
+
+    mockLinkFiles.mockRejectedValueOnce(new Error('offline'));
+
+    await act(async () => {
+      await expect(result.current.save({ name: 'Mocha' })).rejects.toThrow(
+        'offline',
+      );
+    });
+
+    let saved: unknown;
+    await act(async () => {
+      saved = await result.current.save({ name: 'Latte' });
+    });
+
+    expect(sent).toHaveLength(1);
+    expect(saved).toMatchObject({ name: 'Latte' });
   });
 
   it('builds each save on the one before it', async () => {

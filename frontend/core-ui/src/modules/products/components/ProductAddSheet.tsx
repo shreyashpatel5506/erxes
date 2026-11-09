@@ -76,10 +76,13 @@ export const ProductAddSheet = () => {
     >
       <Can action="productsCreate">
         <Sheet.Trigger asChild>
-          <Button>
+          {/* Just the icon while the list is narrow, e.g. beside a record. */}
+          <Button aria-label={t('add-product')} title={t('add-product')}>
             <IconPlus />
-            {t('add-product')}
-            <Kbd>C</Kbd>
+            <span className="hidden @lg/products:inline">
+              {t('add-product')}
+            </span>
+            <Kbd className="hidden @lg/products:inline-flex">C</Kbd>
           </Button>
         </Sheet.Trigger>
       </Can>

@@ -21,13 +21,15 @@ const pickBarcodes = (values: ProductFormValues): TBarcodeValues => ({
 });
 
 /**
- * The Barcodes tab. Barcodes are edited a row at a time (a code, then its
- * variant's name), so they save together from the bar shown while they
- * differ from the product.
+ * The Barcodes tab. A saved product's barcodes are edited a row at a time
+ * (a code, then its variant's name), so they save together from the bar
+ * shown while they differ from the product; a draft takes each change as
+ * it is made.
  */
 export const ProductPanelInventory = ({
   product,
   save,
+  draft = false,
 }: TProductPanelFieldsProps) => {
   const { t } = useTranslation('product', { keyPrefix: 'detail' });
   const defaults = useMemo(
@@ -40,9 +42,8 @@ export const ProductPanelInventory = ({
     control: form.control,
     name: BARCODE_FIELDS,
   });
-  const changed =
-    JSON.stringify({ barcodes, variants, barcodeDescription }) !==
-    JSON.stringify(pickBarcodes(defaults));
+  const edited = JSON.stringify({ barcodes, variants, barcodeDescription });
+  const changed = edited !== JSON.stringify(pickBarcodes(defaults));
 
   // Read when the product changes, not a reason to reset on its own.
   const keep = useRef(changed);
@@ -52,6 +53,11 @@ export const ProductPanelInventory = ({
   useEffect(() => {
     if (!keep.current) form.reset(defaults);
   }, [defaults, form]);
+
+  // A draft has nothing to save yet: it takes the barcodes as they change.
+  useEffect(() => {
+    if (draft && keep.current) save(pickBarcodes(form.getValues()));
+  }, [draft, edited, form, save]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -78,7 +84,7 @@ export const ProductPanelInventory = ({
         >
           <ProductDetailBarcode productDetail={product} />
         </ScrollArea>
-        {changed && (
+        {changed && !draft && (
           <div className="flex shrink-0 items-center justify-end gap-2 border-t px-3 py-2">
             <span className="mr-auto text-xs text-muted-foreground">
               {t('unsaved-changes', 'Unsaved changes')}

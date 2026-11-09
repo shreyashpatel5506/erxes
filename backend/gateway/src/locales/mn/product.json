@@ -218,6 +218,7 @@
     "create-uom": "“{{name}}” үүсгэх",
     "loading": "Ачаалж байна...",
     "remove-sub-uom": "Дэд хэмжих нэгж устгах",
+    "use-suggested-code": "{{code}} ашиглах",
     "choose-category": "Ангилал сонгох",
     "enter-code": "Код оруулах",
     "select-type": "Төрөл сонгох",

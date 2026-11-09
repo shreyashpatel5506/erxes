@@ -16,8 +16,10 @@ import {
   FieldsInDetail,
   type IRecordSidePanelTab,
   type IRecordViewProps,
+  NEW_RECORD_ID,
   RecordSidePanel,
   usePanelExpanded,
+  usePermissionCheck,
   useSidePanel,
 } from 'ui-modules';
 import { ContactPanelIdentity } from '@/side-panel/components/details/ContactPanelActions';
@@ -32,6 +34,7 @@ import { ProductPanelBreadcrumb } from './ProductPanelBreadcrumb';
 import { ProductPanelDetail } from './ProductPanelDetail';
 import { ProductPanelInventory } from './ProductPanelInventory';
 import { ProductPanelMedia } from './ProductPanelMedia';
+import { ProductPanelNew } from './ProductPanelNew';
 
 // Radix sizes its content as a table, which lets wide values push past the
 // panel; a block lets each value shrink and truncate instead.
@@ -45,7 +48,8 @@ const scroll = (content: ReactNode) => (
  * A product in the app's side panel (`?panel=/detail/core:product/<id>`):
  * its fields, media, barcodes, properties, activity and similarity group as
  * tabs. Values save as they are changed. Expanded, it is the product's own
- * page: the details beside the other tabs.
+ * page: the details beside the other tabs. A new product (`NEW_RECORD_ID`)
+ * is drawn the same way as a draft.
  */
 export const ProductRecordPanel = ({
   record,
@@ -53,9 +57,14 @@ export const ProductRecordPanel = ({
   onClose,
 }: IRecordViewProps) => {
   const { t } = useTranslation('product', { keyPrefix: 'detail' });
+  const { t: rootT } = useTranslation('product');
+  const { t: panelT } = useTranslation('common', { keyPrefix: 'side-panel' });
   const productId = record.contentId;
+  const isNew = productId === NEW_RECORD_ID;
+  const { hasActionPermission } = usePermissionCheck();
   const { productDetail, loading, error, refetch } = useProductDetail({
     _id: productId,
+    skip: isNew,
   });
   const { save } = useProductPanelSave(productId);
   const { tab: selectedTab, setTab, dismissPath, path } = useSidePanel();
@@ -65,6 +74,21 @@ export const ProductRecordPanel = ({
       productDetail?._id ? { ...productDetail, _id: productDetail._id } : null,
     [productDetail],
   );
+
+  if (isNew) {
+    return hasActionPermission('productsCreate') ? (
+      <ProductPanelNew onBack={onBack} onClose={onClose} />
+    ) : (
+      <>
+        <RecordSidePanel.Header
+          title={rootT('new-product')}
+          onBack={onBack}
+          onClose={onClose}
+        />
+        <div className="p-4">{panelT('access-denied', 'Access denied')}</div>
+      </>
+    );
+  }
 
   // The name is shown and edited on Details, where a long one wraps; the
   // header keeps to what the panel is.

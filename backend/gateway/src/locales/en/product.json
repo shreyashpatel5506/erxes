@@ -218,6 +218,7 @@
     "create-uom": "Create “{{name}}”",
     "loading": "Loading...",
     "remove-sub-uom": "Remove sub UOM",
+    "use-suggested-code": "Use {{code}}",
     "choose-category": "Choose category",
     "enter-code": "Enter code",
     "select-type": "Select type",

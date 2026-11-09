@@ -9,6 +9,7 @@ import {
   IconLabel,
   IconListDetails,
   IconPackage,
+  IconCheck,
   IconRuler,
   IconShoppingCart,
   IconStack2,
@@ -17,6 +18,7 @@ import {
   IconWeight,
 } from '@tabler/icons-react';
 import {
+  Button,
   cn,
   CurrencyCode,
   CurrencyField,
@@ -45,6 +47,7 @@ import { ContactDetailSection } from '@/side-panel/components/details/ContactDet
 import { ProductConditionsCell } from '@/products/components/ProductConditionsCell';
 import { TProductPatch } from '@/products/product-detail/hooks/useProductPanelSave';
 import { ProductDetail } from '@/products/product-detail/types/detailTypes';
+import { useProductLastCodeByCategory } from 'ui-modules/modules/products/hooks/useProducts';
 import { ProductNameField } from './ProductNameField';
 import { ProductSubUomsField } from './ProductSubUomsField';
 import { ProductUomField } from './ProductUomField';
@@ -62,6 +65,10 @@ export type TProductPanelFieldsProps = {
   product: ProductDetail & { _id: string };
   // Resolves the saved product, or `null` when it was not saved.
   save: (patch: TProductPatch) => Promise<ProductDetail | null>;
+  // A product not created yet: changes stay in the draft until Create.
+  draft?: boolean;
+  // What Create found wrong, by field.
+  errors?: Partial<Record<string, string>>;
 };
 
 const toSingleId = (value: string[] | string) =>
@@ -112,6 +119,12 @@ const ProductVendorField = ({
   );
 };
 
+// A field's problem, under its row.
+const FieldError = ({ message }: { message?: string }) =>
+  message ? (
+    <p className="pb-1 pl-[7.75rem] text-xs text-destructive">{message}</p>
+  ) : null;
+
 const ProductCurrencyField = ({
   value,
   placeholder,
@@ -154,14 +167,25 @@ const ProductCurrencyField = ({
 export const ProductPanelFields = ({
   product,
   save,
+  draft = false,
+  errors,
 }: TProductPanelFieldsProps) => {
   const { t } = useTranslation('product', { keyPrefix: 'detail' });
+  // A new product is offered the next code of its category.
+  const { suggestedCode } = useProductLastCodeByCategory(
+    draft && !product.code ? product.categoryId : undefined,
+  );
   const [uniqueDraft, setUniqueDraft] = useState<TDurationPatch | null>(null);
   const isUnique = product.type === 'unique' || !!uniqueDraft;
   const duration = uniqueDraft?.duration ?? product.duration;
   const durationType = uniqueDraft?.durationType ?? product.durationType;
 
   const changeType = (type: string) => {
+    // A draft is checked as a whole on Create.
+    if (draft) {
+      save({ type });
+      return;
+    }
     if (type === 'unique' && (!product.duration || !product.durationType)) {
       setUniqueDraft({});
       return;
@@ -171,7 +195,7 @@ export const ProductPanelFields = ({
   };
 
   const changeDuration = (patch: TDurationPatch) => {
-    if (!uniqueDraft) {
+    if (draft || !uniqueDraft) {
       save(patch);
       return;
     }
@@ -191,9 +215,11 @@ export const ProductPanelFields = ({
           <ProductNameField
             value={product.name || ''}
             placeholder={t('enter-name')}
+            autoFocus={draft}
             onSave={(name) => save({ name })}
           />
         </PanelField>
+        <FieldError message={errors?.name} />
         <PanelField icon={IconCategory} label={t('category')}>
           <SelectCategory.InlineCell
             scope={`${SCOPE}.category`}
@@ -207,6 +233,7 @@ export const ProductPanelFields = ({
             }}
           />
         </PanelField>
+        <FieldError message={errors?.categoryId} />
         <PanelField icon={IconHash} label={t('code')}>
           <TextField
             scope={`${SCOPE}.code`}
@@ -219,7 +246,19 @@ export const ProductPanelFields = ({
             )}
             onSave={(code) => code.trim() && save({ code: code.trim() })}
           />
+          {suggestedCode && !product.code && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="absolute right-0 top-0 h-7 px-2 text-xs"
+              onClick={() => save({ code: suggestedCode })}
+            >
+              <IconCheck />
+              {t('use-suggested-code', 'Use {{code}}', { code: suggestedCode })}
+            </Button>
+          )}
         </PanelField>
+        <FieldError message={errors?.code} />
         <PanelField icon={IconShoppingCart} label={t('type')}>
           <Select
             value={uniqueDraft ? 'unique' : product.type || ''}
@@ -237,6 +276,7 @@ export const ProductPanelFields = ({
             </Select.Content>
           </Select>
         </PanelField>
+        <FieldError message={errors?.type} />
         <PanelField icon={IconLabel} label={t('short-name')}>
           <TextField
             scope={`${SCOPE}.shortName`}
@@ -249,30 +289,32 @@ export const ProductPanelFields = ({
             onSave={(shortName) => save({ shortName })}
           />
         </PanelField>
-        <PanelField icon={IconTags} label={t('tags')} cell={false}>
-          <TagsSelect.InlineCell
-            type="core:product"
-            mode="multiple"
-            scope={`${SCOPE}.tags`}
-            value={product.tagIds || []}
-            targetIds={[product._id]}
-            options={(tagIds) => ({
-              update: (cache) => {
-                cache.modify({
-                  id: cache.identify({
-                    __typename: 'Product',
-                    _id: product._id,
-                  }),
-                  fields: { tagIds: () => tagIds },
-                  optimistic: true,
-                });
-              },
-            })}
-          />
-          {!product.tagIds?.length && (
-            <EmptyHint>{t('add-tags', 'Add tags')}</EmptyHint>
-          )}
-        </PanelField>
+        {!draft && (
+          <PanelField icon={IconTags} label={t('tags')} cell={false}>
+            <TagsSelect.InlineCell
+              type="core:product"
+              mode="multiple"
+              scope={`${SCOPE}.tags`}
+              value={product.tagIds || []}
+              targetIds={[product._id]}
+              options={(tagIds) => ({
+                update: (cache) => {
+                  cache.modify({
+                    id: cache.identify({
+                      __typename: 'Product',
+                      _id: product._id,
+                    }),
+                    fields: { tagIds: () => tagIds },
+                    optimistic: true,
+                  });
+                },
+              })}
+            />
+            {!product.tagIds?.length && (
+              <EmptyHint>{t('add-tags', 'Add tags')}</EmptyHint>
+            )}
+          </PanelField>
+        )}
       </ContactDetailSection>
       <ContactDetailSection title={t('pricing', 'Pricing')} nested>
         <PanelField icon={IconCurrencyDollar} label={t('unit-price')}>
@@ -283,6 +325,7 @@ export const ProductPanelFields = ({
             onSave={(unitPrice) => save({ unitPrice })}
           />
         </PanelField>
+        <FieldError message={errors?.unitPrice} />
         <PanelField icon={IconCoin} label={t('currency')}>
           <ProductCurrencyField
             value={product.currency || ''}
@@ -300,6 +343,7 @@ export const ProductPanelFields = ({
             onChange={(uom) => save({ uom })}
           />
         </PanelField>
+        <FieldError message={errors?.uom} />
         <div className="flex min-w-0 flex-col gap-1 py-1">
           <span className="flex items-center gap-1.5 px-0 text-xs font-medium text-accent-foreground">
             <IconStack2 className="size-3.5 shrink-0" aria-hidden="true" />
@@ -339,6 +383,7 @@ export const ProductPanelFields = ({
                 <EmptyHint>{t('enter-duration', 'Enter duration')}</EmptyHint>
               )}
             </PanelField>
+            <FieldError message={errors?.duration} />
             <PanelField icon={IconClock} label={t('duration-type')}>
               <Select
                 value={durationType || ''}
@@ -360,6 +405,7 @@ export const ProductPanelFields = ({
                 </Select.Content>
               </Select>
             </PanelField>
+            <FieldError message={errors?.durationType} />
             {uniqueDraft && (
               <p className="px-1 text-xs text-muted-foreground">
                 {t(
@@ -392,15 +438,19 @@ export const ProductPanelFields = ({
             onChange={(vendorId) => save({ vendorId })}
           />
         </PanelField>
-        <PanelField icon={IconListDetails} label={t('conditions')}>
-          <ProductConditionsCell
-            productId={product._id}
-            conditionCodes={product.conditionCodes || []}
-          />
-          {!product.conditionCodes?.length && (
-            <EmptyHint>{t('select-conditions', 'Select conditions')}</EmptyHint>
-          )}
-        </PanelField>
+        {!draft && (
+          <PanelField icon={IconListDetails} label={t('conditions')}>
+            <ProductConditionsCell
+              productId={product._id}
+              conditionCodes={product.conditionCodes || []}
+            />
+            {!product.conditionCodes?.length && (
+              <EmptyHint>
+                {t('select-conditions', 'Select conditions')}
+              </EmptyHint>
+            )}
+          </PanelField>
+        )}
       </ContactDetailSection>
     </div>
   );

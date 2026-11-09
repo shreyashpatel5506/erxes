@@ -1,15 +1,46 @@
-import { ScrollArea } from 'erxes-ui';
+import { IconAlignLeft } from '@tabler/icons-react';
+import { Editor, ScrollArea } from 'erxes-ui';
 import { useTranslation } from 'react-i18next';
-import { PanelDescriptionField, usePanelExpanded } from 'ui-modules';
+import {
+  DataExtensionCreateFields,
+  PanelDescriptionField,
+  usePanelExpanded,
+} from 'ui-modules';
+import { PRODUCT_CONTENT_TYPE } from '@/products/constants/productQueryKey';
 import {
   ProductPanelFields,
   TProductPanelFieldsProps,
 } from './ProductPanelFields';
 
+// A draft's description, kept as it is typed: Create may come before the
+// editor is left.
+const DraftDescriptionField = ({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (description: string) => void;
+}) => (
+  <div className="flex flex-col gap-1.5 pt-2">
+    <span className="flex items-center gap-1.5 text-xs font-medium text-accent-foreground">
+      <IconAlignLeft className="size-3.5 shrink-0" aria-hidden="true" />
+      {label}
+    </span>
+    <Editor
+      initialContent={value}
+      onChange={onChange}
+      scope="side-panel-product-new.description"
+      className="h-auto min-h-20 rounded-sm shadow-none hover:bg-accent focus-within:bg-background focus-within:shadow-focus"
+    />
+  </div>
+);
+
 // The Detail tab: the fields, then the description. On the product's page
 // the fields stand alone, as the description has its own tab there.
 export const ProductPanelDetail = (props: TProductPanelFieldsProps) => {
-  const { product, save } = props;
+  const { product, save, draft } = props;
   const { t } = useTranslation('product', { keyPrefix: 'detail' });
   const expanded = usePanelExpanded();
 
@@ -19,14 +50,28 @@ export const ProductPanelDetail = (props: TProductPanelFieldsProps) => {
     <ScrollArea className="flex-1 min-h-0" viewportClassName="[&>div]:block!">
       <div className="flex flex-col gap-5 p-3">
         <ProductPanelFields {...props} />
-        {!expanded && (
-          <PanelDescriptionField
-            key={product._id}
-            label={t('description')}
-            value={product.description || ''}
-            scope={`side-panel-product.${product._id}.description`}
-            onSave={(description) => save({ description })}
-          />
+        {draft ? (
+          <>
+            <DraftDescriptionField
+              label={t('description')}
+              value={product.description || ''}
+              onChange={(description) => save({ description })}
+            />
+            <DataExtensionCreateFields
+              recordType={PRODUCT_CONTENT_TYPE}
+              layout="stack"
+            />
+          </>
+        ) : (
+          !expanded && (
+            <PanelDescriptionField
+              key={product._id}
+              label={t('description')}
+              value={product.description || ''}
+              scope={`side-panel-product.${product._id}.description`}
+              onSave={(description) => save({ description })}
+            />
+          )
         )}
       </div>
     </ScrollArea>

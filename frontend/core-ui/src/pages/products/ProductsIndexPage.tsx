@@ -1,4 +1,4 @@
-import { ProductAddSheet } from '@/products/components/ProductAddSheet';
+import { ProductAddButton } from '@/products/components/ProductAddButton';
 import { ProductsFilter } from '@/products/components/ProductsFilter';
 import { ProductsHeader } from '@/products/components/ProductsHeader';
 import { ProductsRecordTable } from '@/products/components/ProductsRecordTable';
@@ -18,7 +18,7 @@ export const ProductsIndexPage = () => {
       <ProductSidebar />
       <div className="@container/products flex min-w-0 flex-auto flex-col overflow-hidden">
         <ProductsHeader>
-          <ProductAddSheet />
+          <ProductAddButton />
         </ProductsHeader>
         <div className="flex overflow-hidden flex-col flex-auto w-full">
           <ProductsIndexPageContent />

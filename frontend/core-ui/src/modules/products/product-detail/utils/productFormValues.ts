@@ -117,8 +117,14 @@ const normalizeSubUomRatio = (ratio: number | string | undefined): number => {
   return Number.isFinite(num) && num > 0 ? num : 1;
 };
 
-/** Form values as `productsEdit` variables (attachments as AttachmentInput). */
-export const toProductEditVariables = (data: ProductFormValues) => {
+/**
+ * Form values as `productsEdit` variables (attachments as AttachmentInput).
+ * Conditions are left out: only their own toggle changes them, so a field
+ * save never sends back codes it read before a toggle.
+ */
+export const toProductEditVariables = (values: ProductFormValues) => {
+  const data = { ...values };
+  delete data.conditionCodes;
   // `null`, not a missing variable, so a removed featured image is cleared.
   const attachment =
     data.attachment != null && !Array.isArray(data.attachment)

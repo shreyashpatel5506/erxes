@@ -17,10 +17,24 @@ import {
 
 export type TProductPatch = Partial<ProductFormValues>;
 
+// Fields the product list shows or sorts by. Other changes reach it through
+// the cache: the saved product comes back in the response.
+const LIST_FIELDS: (keyof ProductFormValues)[] = [
+  'name',
+  'code',
+  'categoryId',
+  'vendorId',
+  'unitPrice',
+];
+
+const changesList = (patch: TProductPatch) =>
+  LIST_FIELDS.some((field) => field in patch);
+
 /**
  * Saves one change to the product shown in the side panel. `productsEdit`
  * re-derives barcodes and the UOM from the whole product, so each save sends
- * every field: the cached product with the change on top. Saves run one at
+ * every field but its conditions (only their toggle changes those): the
+ * cached product with the change on top. Saves run one at
  * a time, each from the product the previous one returned, so quick edits
  * never overwrite each other. Resolves the saved product, or `null`.
  */
@@ -74,7 +88,7 @@ export const useProductPanelSave = (productId: string) => {
             _id: productId,
           },
           // The list shows the category and vendor by name.
-          refetchQueries: ['ProductsMain'],
+          refetchQueries: changesList(patch) ? ['ProductsMain'] : [],
         });
         return data?.productsEdit ?? null;
       } catch (error) {

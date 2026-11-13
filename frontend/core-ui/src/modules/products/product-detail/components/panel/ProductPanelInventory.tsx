@@ -38,6 +38,7 @@ export const ProductPanelInventory = ({
   );
   const form = useForm<ProductFormValues>({ defaultValues: defaults });
   const [saving, setSaving] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
   const [barcodes, variants, barcodeDescription] = useWatch({
     control: form.control,
     name: BARCODE_FIELDS,
@@ -85,7 +86,7 @@ export const ProductPanelInventory = ({
           className="flex-1 min-h-0"
           viewportClassName="[&>div]:block!"
         >
-          <ProductDetailBarcode productDetail={product} />
+          <ProductDetailBarcode productDetail={product} resetKey={resetKey} />
         </ScrollArea>
         {changed && !draft && (
           <div className="flex shrink-0 items-center justify-end gap-2 border-t px-3 py-2">
@@ -96,7 +97,10 @@ export const ProductPanelInventory = ({
               type="button"
               variant="outline"
               disabled={saving}
-              onClick={() => form.reset(defaults)}
+              onClick={() => {
+                form.reset(defaults);
+                setResetKey((key) => key + 1);
+              }}
             >
               {t('cancel')}
             </Button>

@@ -214,7 +214,14 @@ export const ProductPanelNew = ({
           description: error.message,
           variant: 'destructive',
         }),
-      onCompleted: ({ productsAdd: created }) => showCreated(created._id),
+      onCompleted: ({ productsAdd: created }) => {
+        toast({
+          title: t('success'),
+          description: t('product-created', 'Product created successfully'),
+          variant: 'success',
+        });
+        showCreated(created._id);
+      },
     });
   };
 
@@ -278,11 +285,15 @@ export const ProductPanelNew = ({
         onBack={onBack}
         onClose={onClose}
       />
+      {/* Details stays mounted and so does each tab once opened: Data
+          Extension values live in their fields, and Create is offered on
+          every tab. */}
       <RecordSidePanel.Tabs
         tabs={tabs}
         value={tab}
         onValueChange={setTab}
         visibleCount={tabs.length}
+        overviewTab="detail"
       />
       <div className="flex shrink-0 justify-end gap-2 border-t bg-background px-3 py-2.5">
         <Button

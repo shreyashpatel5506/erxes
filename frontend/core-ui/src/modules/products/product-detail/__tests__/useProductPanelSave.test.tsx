@@ -127,6 +127,27 @@ describe('useProductPanelSave', () => {
     expect(mockToast).not.toHaveBeenCalled();
   });
 
+  it('never sends the conditions back', async () => {
+    const sent: Record<string, unknown>[] = [];
+    const withConditions = { ...PRODUCT, conditionCodes: ['A'] };
+    const cache = new InMemoryCache();
+    cache.writeQuery({
+      query: PRODUCT_DETAIL_QUERY,
+      variables: { _id: 'p1' },
+      data: { productDetail: withConditions },
+    });
+    const { result } = renderSave(cache, [
+      editMock(sent, { ...withConditions, name: 'Latte' }),
+    ]);
+
+    await act(async () => {
+      await result.current.save({ name: 'Latte' });
+    });
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).not.toHaveProperty('conditionCodes');
+  });
+
   it('sends cached videos without Apollo metadata', async () => {
     const sent: Record<string, unknown>[] = [];
     const video = {

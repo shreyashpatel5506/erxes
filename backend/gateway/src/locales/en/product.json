@@ -95,6 +95,7 @@
     "actions": "Actions",
     "product-rule-updated": "Product rule updated successfully",
     "product-rule-created": "Product rule created successfully",
+    "product-created": "Product created successfully",
     "uom-for-subscription": "UOM for subscription",
     "subscription-period": "Subscription Period",
     "choose": "Choose period",

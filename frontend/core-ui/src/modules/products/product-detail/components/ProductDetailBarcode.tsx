@@ -122,8 +122,12 @@ const BarcodeRow = ({
 
 export const ProductDetailBarcode = ({
   productDetail,
+  resetKey = 0,
 }: {
   productDetail: ProductDetail;
+  // Changed when the form is reset, so the editor shows the reset text:
+  // it takes `initialContent` again only when that is not empty.
+  resetKey?: number;
 }) => {
   const { t } = useTranslation('product', {
     keyPrefix: 'detail',
@@ -290,7 +294,7 @@ export const ProductDetailBarcode = ({
       </ContactDetailSection>
       <ContactDetailSection title={t('barcode-description')}>
         <Editor
-          key={productDetail?._id ?? 'new'}
+          key={`${productDetail?._id ?? 'new'}-${resetKey}`}
           initialContent={formBarcodeDescription}
           onChange={handleDescriptionChange}
           className="h-auto min-h-20 rounded-sm shadow-none hover:bg-accent focus-within:bg-background focus-within:shadow-focus"

@@ -176,6 +176,13 @@ export const ProductPanelFields = ({
     draft && !product.code ? product.categoryId : undefined,
   );
   const [uniqueDraft, setUniqueDraft] = useState<TDurationPatch | null>(null);
+  // A unique product saved without both (e.g. imported) fails every save
+  // until it has them, so they wait for each other as a new choice does.
+  const lacksDuration =
+    !draft &&
+    product.type === 'unique' &&
+    (!product.duration || !product.durationType);
+  const pendingDuration = uniqueDraft ?? (lacksDuration ? {} : null);
   const isUnique = product.type === 'unique' || !!uniqueDraft;
   const duration = uniqueDraft?.duration ?? product.duration;
   const durationType = uniqueDraft?.durationType ?? product.durationType;
@@ -195,11 +202,16 @@ export const ProductPanelFields = ({
   };
 
   const changeDuration = (patch: TDurationPatch) => {
-    if (draft || !uniqueDraft) {
+    if (draft || !pendingDuration) {
       void save(patch);
       return;
     }
-    const next = { ...uniqueDraft, ...patch };
+    const next = {
+      duration: product.duration,
+      durationType: product.durationType,
+      ...pendingDuration,
+      ...patch,
+    };
     setUniqueDraft(next);
     if (next.duration && next.durationType) {
       void save({ type: 'unique', ...next }).then(
@@ -289,6 +301,7 @@ export const ProductPanelFields = ({
             onSave={(shortName) => save({ shortName })}
           />
         </PanelField>
+        <FieldError message={errors?.shortName} />
         {!draft && (
           <PanelField icon={IconTags} label={t('tags')} cell={false}>
             <TagsSelect.InlineCell
@@ -369,6 +382,7 @@ export const ProductPanelFields = ({
             <EmptyHint>{t('enter-weight', 'Enter weight')}</EmptyHint>
           )}
         </PanelField>
+        <FieldError message={errors?.weight} />
         {isUnique && (
           <>
             <PanelField icon={IconHourglass} label={t('duration')}>
@@ -406,7 +420,7 @@ export const ProductPanelFields = ({
               </Select>
             </PanelField>
             <FieldError message={errors?.durationType} />
-            {uniqueDraft && (
+            {pendingDuration && (
               <p className="px-1 text-xs text-muted-foreground">
                 {t(
                   'unique-needs-duration',
